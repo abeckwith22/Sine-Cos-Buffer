@@ -1,0 +1,11 @@
+# Ignore compiled binaries
+*.o
+*.out
+*.a
+
+# Ignore executables
+output
+a.out
+
+# Ignore Editor and IDE files
+*.vscode/
