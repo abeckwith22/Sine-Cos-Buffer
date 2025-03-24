@@ -1,20 +1,25 @@
 #include <stdio.h>
-#include <math.h>
 #include <stdbool.h>
-#include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <locale.h>
+#include <signal.h>
+#include <math.h>
+#include <wchar.h>
 
-#define SCREEN_WIDTH 240
-#define SCREEN_HEIGHT 40
+#define SCREEN_WIDTH 240                // Terminal Width
+#define SCREEN_HEIGHT 40                // Terminal Height
+#define FRAME_CYCLE 100000              // Some large number to prevent an overflow
 
-#define ANSI_COLOR_RED      "\x1b[31m"
+// Ansi colors for styling
+#define ANSI_COLOR_RED      "\x1b[31m"  
 #define ANSI_COLOR_BLUE     "\x1b[34m"
 #define ANSI_COLOR_RESET    "\x1b[0m"
 
 unsigned int frame = 0;
 
-char sineChar = '#';
-char cosChar = '@';
+int sineChar = 0x2593;
+int cosChar = 0x2592;
 
 float scale = 19.0f;
 float cycle = 40.0f;
@@ -33,40 +38,46 @@ float getCos(float nVal) {
     return (cos(nVal/cycle)+1)*scale;
 }
 
+// handles exiting the program by showing the cursor before exiting
+void handleExit(int sig) {
+    printf("\033[?25h");
+    exit(0);
+}
+
 // Clears terminal screen we're drawing to
 void clearScreen() {
     printf("\033[?25l\033[H");
-    // fflush(stdout);
+    fflush(stdout);
 }
 
 // Clears screen buffer and sets all values to ' '
-void clearBuffer(char screen[], int sSize) {
-    memset(screen, ' ', sSize);
-    screen[sSize - 1] = '\0';
+void clearBuffer(wchar_t screen[], int sSize) {
+    wmemset(screen, L' ', sSize - 1);
+    screen[sSize - 1] = L'\0';
 }
 
 // Draws the screen buffer to the terminal window.
-void renderScreen(char screen[], int sWidth, int sHeight) {
+void renderScreen(wchar_t screen[], int sWidth, int sHeight) {
     for(int i = 0; i < sWidth*sHeight; i++){
         char c;
         if(i % sWidth == 0 && i != 0)
             printf("\n");
 
         if(screen[i] == sineChar) {
-            printf(ANSI_COLOR_RED"%c"ANSI_COLOR_RESET, screen[i]);
+            printf(ANSI_COLOR_RED"%lc"ANSI_COLOR_RESET, screen[i]);
         }
         else if(screen[i] == cosChar) {
-            printf(ANSI_COLOR_BLUE"%c"ANSI_COLOR_RESET, screen[i]);
+            printf(ANSI_COLOR_BLUE"%lc"ANSI_COLOR_RESET, screen[i]);
         }
         else {
-            printf(" ");
+            printf("%lc", screen[i]);
         }
     }
 }
 
 // Calculate the line to draw for sine and cos values.
 // Then inserts a character into its position on the screen buffer.
-void calcBuffer(char screen[], int sWidth, int sHeight) {
+void calcBuffer(wchar_t screen[], int sWidth, int sHeight) {
 
     for(int x = 0; x < sWidth; x++) {
         int resultSin = getSin(x+frame);
@@ -83,19 +94,17 @@ void calcBuffer(char screen[], int sWidth, int sHeight) {
     }
 
     // update frame if value gets too high, otherwise if program left on too long, will cause it to crash.
-    if(frame % 1000 == 0 && frame != 0)
-        frame=0;
-    else
-        frame++;
+    frame = (frame + 1) % FRAME_CYCLE;
 }
 
 int main(int argc, char** argv) {
-
+    setlocale(LC_CTYPE, ""); // Allows for unicode display
+    signal(SIGINT, handleExit);  // Gets Ctrl-C signal to exit the program
 
     unsigned int SCREEN_SIZE = SCREEN_WIDTH*SCREEN_HEIGHT;
 
     // create a buffer thats just a sine function, render that to screen
-    char screen[SCREEN_SIZE]={};
+    wchar_t screen[SCREEN_SIZE]={};
 
     clearBuffer(screen, SCREEN_SIZE);
 
