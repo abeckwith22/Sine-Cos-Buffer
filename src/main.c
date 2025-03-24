@@ -52,8 +52,8 @@ void clearScreen() {
 
 // Clears screen buffer and sets all values to ' '
 void clearBuffer(wchar_t screen[], int sSize) {
-    wmemset(screen, L' ', sSize - 1);
-    screen[sSize - 1] = L'\0';
+    wmemset(screen, L' ', sSize);
+    screen[sSize] = L'\0';
 }
 
 // Draws the screen buffer to the terminal window.
